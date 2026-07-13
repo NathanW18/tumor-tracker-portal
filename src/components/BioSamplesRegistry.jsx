@@ -57,7 +57,6 @@ export default function BioSamplesRegistry({ userRole }) {
 
   const openAddModal = () => {
     setEditingId(null);
-    // Explicitly stripping out the 'id' key entirely so Hibernate executes an INSERT rather than an UPDATE
     setFormData({
       sampleDescriptor: '',
       modelDisplayName: '',
@@ -102,10 +101,9 @@ export default function BioSamplesRegistry({ userRole }) {
     const url = editingId ? `${API_BASE}/${editingId}` : API_BASE;
     const method = editingId ? 'PUT' : 'POST';
 
-    // Deep copy form entries to handle database transmission payload constraints safely
     const payload = { ...formData };
     if (!editingId) {
-      delete payload.id; // Guarantee no id primitive property passes down into POST mapping pipeline
+      delete payload.id;
     }
 
     try {
@@ -162,14 +160,19 @@ export default function BioSamplesRegistry({ userRole }) {
   const isReadOnly = userRole === 'RESEARCHER';
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      
+      {/* Header Panel */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: '#0f172a' }}>BioSamples Registry</h1>
           <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Manage and index patient-derived biological materials</p>
         </div>
         {!isReadOnly && (
-          <button onClick={openAddModal} style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '10px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}>
+          <button 
+            onClick={openAddModal} 
+            style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '10px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}
+          >
             + Register Sample
           </button>
         )}
@@ -198,7 +201,7 @@ export default function BioSamplesRegistry({ userRole }) {
                 <th style={{ padding: '14px 16px' }}>Barcode</th>
                 <th style={{ padding: '14px 16px' }}>Type</th>
                 <th style={{ padding: '14px 16px' }}>Disease Site</th>
-                <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '14px 16px', textAlign: 'right', width: '120px' }}>Actions</th>
               </tr>
             </thead>
             <tbody style={{ color: '#334155' }}>

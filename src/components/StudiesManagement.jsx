@@ -156,41 +156,46 @@ export default function StudiesManagement() {
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-        <h1 style={{ fontSize: '18px', fontWeight: '500', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Studies management</h1>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      
+      {/* Header Panel */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: '#0f172a' }}>Studies Management</h1>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Coordinate and audit primary protocol cohorts and investigators</p>
+        </div>
         <button 
           onClick={openAddModal}
-          style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '8px 14px', fontSize: '12px', fontWeight: '500', fontFamily: 'inherit', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
+          style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '10px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}
         >
-          + Add record
+          + Add Record
         </button>
       </div>
 
       {/* Sub-tabs */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
         <button 
           onClick={() => { setSearchSubTab('shortname'); setSearchQuery(''); }}
-          style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '500', fontFamily: 'inherit', background: searchSubTab === 'shortname' ? '#ffffff' : 'transparent', border: '1px solid #cbd5e1', borderRadius: '4px', color: searchSubTab === 'shortname' ? '#0f172a' : '#64748b', cursor: 'pointer' }}
+          style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '600', fontFamily: 'inherit', background: searchSubTab === 'shortname' ? '#ffffff' : 'transparent', border: '1px solid #cbd5e1', borderRadius: '6px', color: searchSubTab === 'shortname' ? '#0f172a' : '#64748b', cursor: 'pointer', transition: 'all 0.15s' }}
         >
-          Study short name
+          Study Short Name
         </button>
         <button 
           onClick={() => { setSearchSubTab('pi'); setSearchQuery(''); }}
-          style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '500', fontFamily: 'inherit', background: searchSubTab === 'pi' ? '#ffffff' : 'transparent', border: '1px solid #cbd5e1', borderRadius: '4px', color: searchSubTab === 'pi' ? '#0f172a' : '#64748b', cursor: 'pointer' }}
+          style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '600', fontFamily: 'inherit', background: searchSubTab === 'pi' ? '#ffffff' : 'transparent', border: '1px solid #cbd5e1', borderRadius: '6px', color: searchSubTab === 'pi' ? '#0f172a' : '#64748b', cursor: 'pointer', transition: 'all 0.15s' }}
         >
-          Principal investigator
+          Principal Investigator
         </button>
       </div>
 
-      {/* Filters */}
-      <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#ffffff', padding: '16px', borderRadius: '4px', border: '1px solid #cbd5e1', marginBottom: '24px' }}>
+      {/* Query Filters */}
+      <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         <input 
           type="text" 
           placeholder={`Search ${searchSubTab === 'shortname' ? 'short name' : 'investigator'}...`}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: '280px', padding: '8px 12px', fontSize: '13px', fontFamily: 'inherit', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', color: '#0f172a' }}
+          style={{ width: '320px', padding: '8px 12px', fontSize: '13px', fontFamily: 'inherit', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', color: '#0f172a' }}
         />
         
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748b', cursor: 'pointer', userSelect: 'none' }}>
@@ -203,21 +208,24 @@ export default function StudiesManagement() {
           Exact match
         </label>
 
-        <button type="submit" disabled={loading} style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '8px 16px', fontSize: '13px', fontWeight: '500', fontFamily: 'inherit', borderRadius: '4px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer' }}>
+        <button type="submit" disabled={loading} style={{ backgroundColor: '#0284c7', color: '#ffffff', padding: '8px 16px', fontSize: '13px', fontWeight: '600', fontFamily: 'inherit', borderRadius: '6px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? 'Searching...' : 'Search'}
         </button>
       </form>
 
       {error && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '12px', borderRadius: '4px', fontSize: '13px', marginBottom: '24px' }}>
+        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '12px 16px', color: '#991b1b', fontSize: '13px', marginBottom: '20px' }}>
           {error}
         </div>
       )}
 
       {/* Pop-up Overlay Modal Backdrop */}
       {isFormOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: '320px', animation: 'fadeIn 0.15s ease-out' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '360px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', boxSizing: 'border-box' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#0f172a' }}>
+              {formMode === 'add' ? 'Add Study Record' : 'Modify Study Parameters'}
+            </h3>
             <StudyForm 
               formMode={formMode}
               inputShortName={inputShortName}
@@ -232,45 +240,43 @@ export default function StudiesManagement() {
       )}
 
       {/* Table Content */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #cbd5e1', overflow: 'visible' }}>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           <thead>
-            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
-              <th style={{ padding: '12px 16px', fontWeight: '500', color: '#475569' }}>Study short name</th>
-              <th style={{ padding: '12px 16px', fontWeight: '500', color: '#475569' }}>Principal investigator</th>
-              <th style={{ padding: '12px 16px', fontWeight: '500', color: '#475569', width: '64px', textAlign: 'center' }}>Actions</th>
+            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>
+              <th style={{ padding: '14px 16px' }}>Study Short Name</th>
+              <th style={{ padding: '14px 16px' }}>Principal Investigator</th>
+              <th style={{ padding: '14px 16px', width: '80px', textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody style={{ color: '#334155' }}>
             {loading ? (
               <tr>
                 <td colSpan="3" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
-                  Loading records...
+                  Loading study records...
                 </td>
               </tr>
             ) : studies.length === 0 ? (
               <tr>
                 <td colSpan="3" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
-                  No records found.
+                  No studies found in this workspace view.
                 </td>
               </tr>
             ) : (
               studies.map((study, idx) => (
-                <tr key={study.studyShortName || idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                  <td style={{ padding: '12px 16px', fontWeight: '500', color: '#0f172a' }}>
+                <tr key={study.studyShortName || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '14px 16px', fontWeight: '600', color: '#0f172a' }}>
                     {study.studyShortName || '—'}
                   </td>
-                  <td style={{ padding: '12px 16px' }}>
+                  <td style={{ padding: '14px 16px' }}>
                     {study.principleInvestigator || '—'}
                   </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', position: 'relative' }}>
+                  <td style={{ padding: '14px 16px', textAlign: 'center', position: 'relative' }}>
                     
-                    {/* Compact SVG Dots Trigger */}
+                    {/* Compact Dropdown Trigger */}
                     <button 
                       onClick={(e) => toggleDropdown(e, idx)}
                       style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '4px', outline: 'none' }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = '#475569'}
-                      onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
                     >
                       <svg width="14" height="4" viewBox="0 0 14 4" fill="currentColor">
                         <circle cx="2" cy="2" r="1.75" />

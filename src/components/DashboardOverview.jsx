@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from 'react';
 
-export default function DashboardOverview({ userRole, setCurrentTab, userEmail, user }) {
+export default function DashboardOverview(props) {
+  // Destructure common props, but we keep 'props' intact to scan for the email
+  const { userRole, setCurrentTab } = props;
+  
   const [samples, setSamples] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isBackendOnline, setIsBackendOnline] = useState(false);
 
   const API_BASE = 'http://localhost:8080/api/biosamples';
 
-  // Safely extract email whether passed as userEmail, user.email, or user.userEmail
-  const displayEmail = userEmail || (user && (user.email || user.userEmail)) || 'no-reply@system.local';
+  // --- Bulletproof Email Finder ---
+  // Recursively searches all props for any string containing "@"
+  const findEmailInProps = (obj) => {
+    if (!obj) return null;
+    if (typeof obj === 'string' && obj.includes('@')) {
+      return obj;
+    }
+    if (typeof obj === 'object') {
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          const result = findEmailInProps(obj[key]);
+          if (result) return result;
+        }
+      }
+    }
+    return null;
+  };
+
+  const displayEmail = findEmailInProps(props) || 'no-reply@system.local';
 
   useEffect(() => {
     const checkHealthAndFetch = async () => {
@@ -17,7 +37,6 @@ export default function DashboardOverview({ userRole, setCurrentTab, userEmail, 
         setIsBackendOnline(true);
         if (response.status === 200) {
           const data = await response.json();
-          console.log('Dashboard received payload structure:', data[0] || 'Empty array');
           setSamples(Array.isArray(data) ? data : []);
         } else if (response.status === 204) {
           setSamples([]);
@@ -33,19 +52,24 @@ export default function DashboardOverview({ userRole, setCurrentTab, userEmail, 
     checkHealthAndFetch();
   }, []);
 
+  // --- Flexible Aggregation Logic ---
   const totalSamples = samples.length;
 
-  // Ultra-broad check to capture models if they exist under any standard naming variant
+  // 1. Calculate Models: Check for any model, modelId, modelName, or associated identifier
   const modelsLinked = samples.filter(s => {
-    const modelKey = s.modelDisplayName || s.modelId || s.associatedModel || s.modelName || s.model || s.sampleName || s.name;
-    return modelKey && String(modelKey).trim() !== '';
+    const modelKey = s.modelDisplayName || s.modelId || s.modelName || s.model || s.associatedModel;
+    return modelKey !== undefined && modelKey !== null && String(modelKey).trim() !== '';
   }).length;
 
-  const uniqueSitesCount = new Set(
+  // 2. Calculate Studies: Scans for keys containing "study", "project", or fallback to unique IDs
+  const uniqueStudiesCount = new Set(
     samples
-      .map(s => s.primaryDiseaseSite || s.diseaseSite || s.site || s.tissue || s.diagnosis || '')
-      .filter(val => val.trim() !== '')
-      .map(val => val.toLowerCase())
+      .map(s => {
+        // Dynamically find any key in the object that has "study" in its name
+        const studyKey = Object.keys(s).find(k => k.toLowerCase().includes('study'));
+        return studyKey ? s[studyKey] : (s.studyId || s.studyName || s.study || s.projectId || s.id || '');
+      })
+      .filter(val => val !== undefined && val !== null && String(val).trim() !== '')
   ).size;
 
   const exportToCSV = () => {
@@ -53,12 +77,12 @@ export default function DashboardOverview({ userRole, setCurrentTab, userEmail, 
       alert('No records available to export.');
       return;
     }
-    const headers = ['ID', 'Sample ID', 'Model ID', 'Disease Site'];
+    const headers = ['ID', 'Sample ID', 'Model ID', 'Study Context'];
     const rows = samples.map(s => [
       s.id || '',
       s.sampleId || s.id || '',
       s.modelDisplayName || s.modelId || s.modelName || s.model || '',
-      s.primaryDiseaseSite || s.diseaseSite || s.site || ''
+      s.studyId || s.studyName || s.study || ''
     ]);
     const csvContent = [
       headers.join(','),
@@ -123,9 +147,9 @@ export default function DashboardOverview({ userRole, setCurrentTab, userEmail, 
             </div>
 
             <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', textAlign: 'center' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>Sites</div>
+              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>Studies</div>
               <div style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', fontFamily: 'monospace' }}>
-                {loading ? '...' : uniqueSitesCount}
+                {loading ? '...' : uniqueStudiesCount}
               </div>
             </div>
 
