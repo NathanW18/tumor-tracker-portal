@@ -7,6 +7,7 @@ import DashboardOverview from './components/DashboardOverview';
 import StudiesManagement from './components/StudiesManagement';
 import ModelsRegistry from './components/ModelsRegistry';
 import BioSamplesRegistry from './components/BioSamplesRegistry';
+import STRAnalysisRegistry from './components/STRAnalysisRegistry'; // Imported STR Registry Component
 import SettingsWorkspace from './components/SettingsWorkspace';
 
 export default function App() {
@@ -153,7 +154,7 @@ export default function App() {
           {/* Collapsible Tray Area */}
           <div style={{ 
             display: 'flex', flexDirection: 'column', gap: '2px',
-            maxHeight: isRecordsOpen ? '160px' : '0px', 
+            maxHeight: isRecordsOpen ? '200px' : '0px', 
             overflow: 'hidden', 
             transition: 'max-height 0.2s cubic-bezier(0, 0, 0.2, 1)' 
           }}>
@@ -180,6 +181,17 @@ export default function App() {
                 <path d="M12 2a5 5 0 0 0-5 5v3.5a5 5 0 0 0 10 0V7a5 5 0 0 0-5-5z" />
               </svg>
               <span style={{ marginLeft: '10px' }}>Samples</span>
+            </button>
+
+            {/* NEW NESTED LINK: STR ANALYSIS */}
+            <button onClick={() => setCurrentTab('str-analysis')} style={getNestedButtonStyle('str-analysis')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={getIconColor('str-analysis')} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="9" x2="20" y2="9" />
+                <line x1="4" y1="15" x2="20" y2="15" />
+                <line x1="10" y1="3" x2="8" y2="21" />
+                <line x1="16" y1="3" x2="14" y2="21" />
+              </svg>
+              <span style={{ marginLeft: '10px' }}>STR Analysis</span>
             </button>
           </div>
 
@@ -222,6 +234,8 @@ export default function App() {
           <ModelsRegistry onStudyLinkClick={(name) => { setStudySearchTarget(name); setCurrentTab('studies'); }} />
         ) : currentTab === 'samples' ? (
           <BioSamplesRegistry userRole={loggedInUserGroup} />
+        ) : currentTab === 'str-analysis' ? (
+          <STRAnalysisRegistry userRole={loggedInUserGroup} />
         ) : currentTab === 'settings' ? (
           <SettingsWorkspace userRole={loggedInUserGroup} userEmail={loggedInUserEmail} />
         ) : (
