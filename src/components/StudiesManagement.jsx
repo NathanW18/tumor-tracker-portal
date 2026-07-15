@@ -4,7 +4,7 @@ import StudyForm from './StudyForm';
 
 const BACKEND_URL = 'http://localhost:8080';
 
-export default function StudiesManagement() {
+export default function StudiesManagement({ readOnly = false, initialSearchQuery, clearInitialSearch }) {
   const [searchSubTab, setSearchSubTab] = useState('shortname');
   const [searchQuery, setSearchQuery] = useState('');
   const [exactMatch, setExactMatch] = useState(false);
@@ -60,6 +60,14 @@ export default function StudiesManagement() {
   }, [searchSubTab]);
 
   useEffect(() => {
+    if (initialSearchQuery) {
+      setSearchQuery(initialSearchQuery);
+      fetchStudiesData();
+      if (clearInitialSearch) clearInitialSearch();
+    }
+  }, [initialSearchQuery]);
+
+  useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setActiveMenuIdx(null);
@@ -75,6 +83,7 @@ export default function StudiesManagement() {
   };
 
   const openAddModal = () => {
+    if (readOnly) return;
     setFormMode('add');
     setInputShortName('');
     setInputPi('');
@@ -83,6 +92,7 @@ export default function StudiesManagement() {
   };
 
   const openEditModal = (study, idx) => {
+    if (readOnly) return;
     setFormMode('edit');
     setSelectedIdx(idx);
     setEditingOriginalShortName(study.studyShortName);
@@ -94,6 +104,7 @@ export default function StudiesManagement() {
 
   const handleSaveRecord = async (e) => {
     e.preventDefault();
+    if (readOnly) return;
     if (!inputShortName.trim() || !inputPi.trim()) return;
 
     const payload = {
@@ -131,6 +142,7 @@ export default function StudiesManagement() {
   };
 
   const handleDeleteRecord = async (study, idx) => {
+    if (readOnly) return;
     setActiveMenuIdx(null);
     if (!window.confirm("Permanently delete this study protocol record?")) return;
     
@@ -164,12 +176,26 @@ export default function StudiesManagement() {
           <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: '#0f172a' }}>Studies Management</h1>
           <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Coordinate and audit primary protocol cohorts and investigators</p>
         </div>
-        <button 
-          onClick={openAddModal}
-          style={{ backgroundColor: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '10px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' }}
-        >
-          + Add Record
-        </button>
+        
+        {/* Only render "+ Add Record" button if user is NOT in read-only mode */}
+        {!readOnly && (
+          <button 
+            onClick={openAddModal}
+            style={{ 
+              backgroundColor: '#0284c7', 
+              color: '#ffffff', 
+              border: 'none', 
+              borderRadius: '6px', 
+              padding: '10px 16px', 
+              fontSize: '13px', 
+              fontWeight: '600', 
+              cursor: 'pointer', 
+              boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)' 
+            }}
+          >
+            + Add Record
+          </button>
+        )}
       </div>
 
       {/* Sub-tabs */}
@@ -246,19 +272,21 @@ export default function StudiesManagement() {
             <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>
               <th style={{ padding: '14px 16px' }}>Study Short Name</th>
               <th style={{ padding: '14px 16px' }}>Principal Investigator</th>
-              <th style={{ padding: '14px 16px', width: '80px', textAlign: 'center' }}>Actions</th>
+              
+              {/* Only show "Actions" header if NOT in read-only mode */}
+              {!readOnly && <th style={{ padding: '14px 16px', width: '80px', textAlign: 'center' }}>Actions</th>}
             </tr>
           </thead>
           <tbody style={{ color: '#334155' }}>
             {loading ? (
               <tr>
-                <td colSpan="3" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={readOnly ? "2" : "3"} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                   Loading study records...
                 </td>
               </tr>
             ) : studies.length === 0 ? (
               <tr>
-                <td colSpan="3" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={readOnly ? "2" : "3"} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                   No studies found in this workspace view.
                 </td>
               </tr>
@@ -271,46 +299,50 @@ export default function StudiesManagement() {
                   <td style={{ padding: '14px 16px' }}>
                     {study.principleInvestigator || '—'}
                   </td>
-                  <td style={{ padding: '14px 16px', textAlign: 'center', position: 'relative' }}>
-                    
-                    {/* Compact Dropdown Trigger */}
-                    <button 
-                      onClick={(e) => toggleDropdown(e, idx)}
-                      style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '4px', outline: 'none' }}
-                    >
-                      <svg width="14" height="4" viewBox="0 0 14 4" fill="currentColor">
-                        <circle cx="2" cy="2" r="1.75" />
-                        <circle cx="7" cy="2" r="1.75" />
-                        <circle cx="12" cy="2" r="1.75" />
-                      </svg>
-                    </button>
-
-                    {/* Popover Options Menu */}
-                    {activeMenuIdx === idx && (
-                      <div 
-                        ref={menuRef}
-                        style={{ position: 'absolute', right: '16px', top: '34px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', zIndex: 10, width: '100px', padding: '4px 0', boxSizing: 'border-box' }}
+                  
+                  {/* Only render action dropdown if NOT in read-only mode */}
+                  {!readOnly && (
+                    <td style={{ padding: '14px 16px', textAlign: 'center', position: 'relative' }}>
+                      
+                      {/* Compact Dropdown Trigger */}
+                      <button 
+                        onClick={(e) => toggleDropdown(e, idx)}
+                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '4px', outline: 'none' }}
                       >
-                        <button 
-                          onClick={() => openEditModal(study, idx)}
-                          style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#334155', cursor: 'pointer', fontFamily: 'inherit' }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f1f5f9'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteRecord(study, idx)}
-                          style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit' }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#fef2f2'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                        <svg width="14" height="4" viewBox="0 0 14 4" fill="currentColor">
+                          <circle cx="2" cy="2" r="1.75" />
+                          <circle cx="7" cy="2" r="1.75" />
+                          <circle cx="12" cy="2" r="1.75" />
+                        </svg>
+                      </button>
 
-                  </td>
+                      {/* Popover Options Menu */}
+                      {activeMenuIdx === idx && (
+                        <div 
+                          ref={menuRef}
+                          style={{ position: 'absolute', right: '16px', top: '34px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', zIndex: 10, width: '100px', padding: '4px 0', boxSizing: 'border-box' }}
+                        >
+                          <button 
+                            onClick={() => openEditModal(study, idx)}
+                            style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#334155', cursor: 'pointer', fontFamily: 'inherit' }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f1f5f9'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteRecord(study, idx)}
+                            style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit' }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#fef2f2'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+
+                    </td>
+                  )}
                 </tr>
               ))
             )}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 export default function DashboardOverview(props) {
-  // Destructure common props, but we keep 'props' intact to scan for the email
-  const { userRole, setCurrentTab } = props;
+  // 1. Destructure userEmail here alongside your other props
+  const { userRole, setCurrentTab, userEmail } = props; 
   
   const [samples, setSamples] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,7 +11,6 @@ export default function DashboardOverview(props) {
   const API_BASE = 'http://localhost:8080/api/biosamples';
 
   // --- Bulletproof Email Finder ---
-  // Recursively searches all props for any string containing "@"
   const findEmailInProps = (obj) => {
     if (!obj) return null;
     if (typeof obj === 'string' && obj.includes('@')) {
@@ -28,8 +27,8 @@ export default function DashboardOverview(props) {
     return null;
   };
 
-  const displayEmail = findEmailInProps(props) || 'no-reply@system.local';
-
+  // 2. Look for userEmail first, use your recursive finder as a backup, then fallback to system default
+  const displayEmail = userEmail || findEmailInProps(props) || 'no-reply@system.local';
   useEffect(() => {
     const checkHealthAndFetch = async () => {
       try {
