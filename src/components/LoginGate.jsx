@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 
 export default function LoginGate({ onLoginSuccess }) {
   // Toggle between 'login' and 'register' modes
@@ -11,12 +11,16 @@ export default function LoginGate({ onLoginSuccess }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [infoMessage, setInfoMessage] = useState(null);
+  
+  // Track unverified user object temporarily to allow resending emails
+  const [unverifiedUser, setUnverifiedUser] = useState(null);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) return;
 
-    // Validation check for registration mode
     if (authMode === 'register' && password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -24,27 +28,51 @@ export default function LoginGate({ onLoginSuccess }) {
 
     setLoading(true);
     setError(null);
+    setInfoMessage(null);
+    setUnverifiedUser(null);
 
     try {
-      let userCredential;
-
       if (authMode === 'login') {
         // Sign in existing user
-        userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const user = userCredential.user;
+
+        // Gate access check: Enforce email validation record check
+        if (!user.emailVerified) {
+          setUnverifiedUser(user); 
+          
+          // Instantly sign them out globally so the parent App state doesn't bypass this screen
+          await signOut(auth); 
+          
+          setError("Please verify your email and check your spam folder.");
+          setLoading(false);
+          return;
+        }
+
+        // Assign user groups context based on corporate email coordinates
+        let resolvedGroup = 'RESEARCHER';
+        if (email.toLowerCase().includes('admin') || email.toLowerCase().endsWith('@uhn.ca')) {
+          resolvedGroup = 'ADMIN';
+        }
+
+        onLoginSuccess(resolvedGroup, user.email);
       } else {
         // Register a new user account in Firebase
-        userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const user = userCredential.user;
+
+        // Dispatch operational verification link instantly
+        await sendEmailVerification(user);
+
+        // Terminate the auto-login session immediately before the parent state catches it
+        await signOut(auth);
+
+        // Reset inputs and redirect user smoothly back to login screen with your exact message
+        setAuthMode('login');
+        setPassword('');
+        setConfirmPassword('');
+        setInfoMessage("Please verify your email and check your spam folder.");
       }
-
-      const user = userCredential.user;
-
-      // Assign user groups context based on corporate email coordinates
-      let resolvedGroup = 'RESEARCHER';
-      if (email.toLowerCase().includes('admin') || email.toLowerCase().endsWith('@uhn.ca')) {
-        resolvedGroup = 'ADMIN';
-      }
-
-      onLoginSuccess(resolvedGroup, user.email);
     } catch (err) {
       console.error(err);
       if (err.code === 'auth/email-already-in-use') {
@@ -61,9 +89,27 @@ export default function LoginGate({ onLoginSuccess }) {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!unverifiedUser) return;
+    setResendLoading(true);
+    setError(null);
+    try {
+      await sendEmailVerification(unverifiedUser);
+      setInfoMessage("A fresh verification link has been transmitted to your inbox.");
+      setUnverifiedUser(null);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to resend validation payload: " + err.message);
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const switchMode = (mode) => {
     setAuthMode(mode);
     setError(null);
+    setInfoMessage(null);
+    setUnverifiedUser(null);
     setPassword('');
     setConfirmPassword('');
   };
@@ -88,6 +134,22 @@ export default function LoginGate({ onLoginSuccess }) {
         {error && (
           <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '10px 12px', borderRadius: '4px', fontSize: '12px', marginBottom: '16px', lineHeight: '1.4' }}>
             {error}
+            {unverifiedUser && (
+              <button 
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+                style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: '#0284c7', fontWeight: '600', fontSize: '12px', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}
+              >
+                {resendLoading ? 'Transmitting code...' : 'Resend verification email'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {infoMessage && (
+          <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', padding: '10px 12px', borderRadius: '4px', fontSize: '12px', marginBottom: '16px', lineHeight: '1.4' }}>
+            {infoMessage}
           </div>
         )}
 
@@ -136,7 +198,7 @@ export default function LoginGate({ onLoginSuccess }) {
           <button 
             type="submit" 
             disabled={loading}
-            style={{ width: '100%', backgroundColor: '#0f172a', color: '#ffffff', padding: '10px 0', fontSize: '13px', fontWeight: '600', borderRadius: '4px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px' }}
+            style={{ width: '100%', backgroundColor: '#0f172a', color: '#ffffff', padding: '10px 0', fontSize: '13px', fontWeight: '600', borderRadius: '4px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px', fontFamily: 'inherit' }}
           >
             {loading ? 'Processing auth signature...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
           </button>

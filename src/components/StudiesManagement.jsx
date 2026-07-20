@@ -174,7 +174,6 @@ export default function StudiesManagement({ readOnly = false, initialSearchQuery
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: '#0f172a' }}>Studies Management</h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Coordinate and audit primary protocol cohorts and investigators</p>
         </div>
         
         {/* Only render "+ Add Record" button if user is NOT in read-only mode */}
@@ -320,7 +319,19 @@ export default function StudiesManagement({ readOnly = false, initialSearchQuery
                       {activeMenuIdx === idx && (
                         <div 
                           ref={menuRef}
-                          style={{ position: 'absolute', right: '16px', top: '34px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', zIndex: 10, width: '100px', padding: '4px 0', boxSizing: 'border-box' }}
+                          style={{ 
+                            position: 'absolute', 
+                            right: '16px', 
+                            ...(idx === studies.length - 1 ? { bottom: '34px' } : { top: '34px' }),
+                            backgroundColor: '#ffffff', 
+                            border: '1px solid #cbd5e1', 
+                            borderRadius: '4px', 
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', 
+                            zIndex: 10, 
+                            width: '100px', 
+                            padding: '4px 0', 
+                            boxSizing: 'border-box' 
+                          }}
                         >
                           <button 
                             onClick={() => openEditModal(study, idx)}

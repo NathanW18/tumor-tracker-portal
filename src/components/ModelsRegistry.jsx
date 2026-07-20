@@ -4,7 +4,6 @@ import ModelForm from './ModelForm';
 
 const BACKEND_URL = 'http://localhost:8080';
 
-// Accepts readOnly prop (defaults to false if not passed)
 export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [exactMatch, setExactMatch] = useState(false);
@@ -19,8 +18,13 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
   const [formMode, setFormMode] = useState('add');
   const [editingModelDisplayName, setEditingModelDisplayName] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(null);
+  
+  // Model Input State Variables
   const [inputModelIdentifier, setInputModelIdentifier] = useState('');
   const [inputSelectedStudy, setInputSelectedStudy] = useState('');
+  const [inputProtocolParticipantID, setInputProtocolParticipantID] = useState('');
+  const [inputParentModelDisplayName, setInputParentModelDisplayName] = useState('');
+  const [inputComment, setInputComment] = useState('');
 
   // Dropdown ref tracking
   const [activeMenuIdx, setActiveMenuIdx] = useState(null);
@@ -87,6 +91,9 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
     setFormMode('add');
     setInputModelIdentifier('');
     setInputSelectedStudy('');
+    setInputProtocolParticipantID('');
+    setInputParentModelDisplayName('');
+    setInputComment('');
     setIsFormOpen(true);
     setActiveMenuIdx(null);
   };
@@ -95,9 +102,28 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
     if (readOnly) return; 
     setFormMode('edit');
     setSelectedIdx(idx);
-    setEditingModelDisplayName(model.modelDisplayName);
+    
+    const calculatedDisplayName = model.modelDisplayName || `${model.studyShortName || ''}${model.modelIdentifier || ''}`;
+    setEditingModelDisplayName(calculatedDisplayName);
+
     setInputModelIdentifier(model.modelIdentifier || '');
     setInputSelectedStudy(model.studyShortName || '');
+    setInputProtocolParticipantID(model.protocolParticipantID || '');
+    setInputParentModelDisplayName(model.parentModelDisplayName || '');
+    setInputComment(model.comment || '');
+    setIsFormOpen(true);
+    setActiveMenuIdx(null);
+  };
+
+  const openViewModal = (model) => {
+    setFormMode('view');
+    
+    setInputModelIdentifier(model.modelIdentifier || '');
+    setInputSelectedStudy(model.studyShortName || '');
+    setInputProtocolParticipantID(model.protocolParticipantID || '');
+    setInputParentModelDisplayName(model.parentModelDisplayName || '');
+    setInputComment(model.comment || '');
+    
     setIsFormOpen(true);
     setActiveMenuIdx(null);
   };
@@ -107,9 +133,15 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
     if (readOnly) return; 
     if (!inputModelIdentifier.trim() || !inputSelectedStudy) return;
 
+    const calculatedDisplayName = `${inputSelectedStudy}${inputModelIdentifier}`;
+
     const payload = {
       modelIdentifier: inputModelIdentifier,
-      studyShortName: inputSelectedStudy
+      studyShortName: inputSelectedStudy,
+      modelDisplayName: calculatedDisplayName,
+      protocolParticipantID: inputProtocolParticipantID || null, 
+      parentModelDisplayName: inputParentModelDisplayName || null,
+      comment: inputComment || null
     };
 
     setError(null);
@@ -122,7 +154,7 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
         }
       } else {
         const response = await axios.put(`${BACKEND_URL}/api/models/${editingModelDisplayName}`, payload);
-        if (response.status === 200) {
+        if (response.status === 200 || response.status === 201) {
           setModels(prev => {
             const updated = [...prev];
             updated[selectedIdx] = response.data;
@@ -170,10 +202,8 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: '#0f172a' }}>Models Registry</h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Manage preclinical xenograft and cell-line system assets</p>
         </div>
         
-        {/* Only render "+ Register Model" button if the user is NOT in read-only mode */}
         {!readOnly && (
           <button 
             onClick={openAddModal}
@@ -230,7 +260,9 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '360px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', boxSizing: 'border-box' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#0f172a' }}>
-              {formMode === 'add' ? 'Register New Model' : 'Modify Model Parameters'}
+              {formMode === 'add' ? 'Register New Model' : 
+               formMode === 'edit' ? 'Modify Model Parameters' : 
+               'Preclinical Model Details'}
             </h3>
             <ModelForm 
               formMode={formMode}
@@ -239,6 +271,12 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
               setInputModelIdentifier={setInputModelIdentifier}
               inputSelectedStudy={inputSelectedStudy}
               setInputSelectedStudy={setInputSelectedStudy}
+              inputProtocolParticipantID={inputProtocolParticipantID}
+              setInputProtocolParticipantID={setInputProtocolParticipantID}
+              inputParentModelDisplayName={inputParentModelDisplayName}
+              setInputParentModelDisplayName={setInputParentModelDisplayName}
+              inputComment={inputComment}
+              setInputComment={setInputComment}
               studiesList={studies}
               onSave={handleSaveRecord}
               onCancel={() => setIsFormOpen(false)}
@@ -248,32 +286,33 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
       )}
 
       {/* Registry Record Table Frame */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'visible', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           <thead>
             <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>
-              <th style={{ padding: '14px 16px' }}>Model ID Designation</th>
+              <th style={{ padding: '14px 16px', borderTopLeftRadius: '8px' }}>Model ID Designation</th>
               <th style={{ padding: '14px 16px' }}>Associated Study</th>
-              {!readOnly && <th style={{ padding: '14px 16px', width: '80px', textAlign: 'center' }}>Actions</th>}
+              <th style={{ padding: '14px 16px', width: '120px', textAlign: 'center', borderTopRightRadius: '8px' }}>Actions</th>
             </tr>
           </thead>
           <tbody style={{ color: '#334155' }}>
             {loading ? (
               <tr>
-                <td colSpan={readOnly ? "2" : "3"} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                <td colSpan="3" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                   Querying database index keys...
                 </td>
               </tr>
             ) : models.length === 0 ? (
               <tr>
-                <td colSpan={readOnly ? "2" : "3"} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                <td colSpan="3" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                   No indexed asset records found.
                 </td>
               </tr>
             ) : (
               models.map((model, idx) => {
                 const displayId = model.modelDisplayName || `${model.studyShortName || ''}${model.modelIdentifier || ''}`;
-                
+                const isLastRow = idx === models.length - 1;
+
                 return (
                   <tr key={displayId + idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '14px 16px', fontWeight: '600', color: '#0f172a' }}>
@@ -284,46 +323,89 @@ export default function ModelsRegistry({ readOnly = false, onStudyLinkClick }) {
                         {model.studyShortName || 'Unassigned'}
                       </span>
                     </td>
-                    {!readOnly && (
-                      <td style={{ padding: '14px 16px', textAlign: 'center', position: 'relative' }}>
-                        
+                    
+                    <td style={{ padding: '14px 16px', textAlign: 'center', position: 'relative' }}>
+                      {readOnly ? (
+                        /* Research Mode: Show view details button directly on the row */
                         <button 
-                          onClick={(e) => { e.stopPropagation(); setActiveMenuIdx(activeMenuIdx === idx ? null : idx); }}
-                          style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '4px', outline: 'none' }}
+                          onClick={() => openViewModal(model)}
+                          style={{
+                            backgroundColor: 'transparent',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '4px',
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#475569',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            fontFamily: 'inherit'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f1f5f9'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                         >
-                          <svg width="14" height="4" viewBox="0 0 14 4" fill="currentColor">
-                            <circle cx="2" cy="2" r="1.75" />
-                            <circle cx="7" cy="2" r="1.75" />
-                            <circle cx="12" cy="2" r="1.75" />
-                          </svg>
+                          View Details
                         </button>
-
-                        {activeMenuIdx === idx && (
-                          <div 
-                            ref={menuRef}
-                            style={{ position: 'absolute', right: '16px', top: '34px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', zIndex: 10, width: '100px', padding: '4px 0', boxSizing: 'border-box' }}
+                      ) : (
+                        /* Admin Mode: Show triple-dot actions menu */
+                        <>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setActiveMenuIdx(activeMenuIdx === idx ? null : idx); }}
+                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px', borderRadius: '4px', outline: 'none' }}
                           >
-                            <button 
-                              onClick={() => openEditModal(model, idx)}
-                              style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#334155', cursor: 'pointer', fontFamily: 'inherit' }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = '#f1f5f9'}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                            >
-                              Edit
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteRecord(model, idx)}
-                              style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit' }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = '#fef2f2'}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
+                            <svg width="14" height="4" viewBox="0 0 14 4" fill="currentColor">
+                              <circle cx="2" cy="2" r="1.75" />
+                              <circle cx="7" cy="2" r="1.75" />
+                              <circle cx="12" cy="2" r="1.75" />
+                            </svg>
+                          </button>
 
-                      </td>
-                    )}
+                          {activeMenuIdx === idx && (
+                            <div 
+                              ref={menuRef}
+                              style={{ 
+                                position: 'absolute', 
+                                right: '16px', 
+                                ...(isLastRow && models.length > 1 ? { bottom: '34px' } : { top: '34px' }),
+                                backgroundColor: '#ffffff', 
+                                border: '1px solid #cbd5e1', 
+                                borderRadius: '4px', 
+                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', 
+                                zIndex: 10, 
+                                width: '110px', 
+                                padding: '4px 0', 
+                                boxSizing: 'border-box' 
+                              }}
+                            >
+                              <button 
+                                onClick={() => openViewModal(model)}
+                                style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#334155', cursor: 'pointer', fontFamily: 'inherit' }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f1f5f9'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                              >
+                                View Details
+                              </button>
+                              <button 
+                                onClick={() => openEditModal(model, idx)}
+                                style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#334155', cursor: 'pointer', fontFamily: 'inherit' }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f1f5f9'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteRecord(model, idx)}
+                                style={{ display: 'block', width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', fontSize: '12px', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit' }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#fef2f2'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </td>
                   </tr>
                 );
               })

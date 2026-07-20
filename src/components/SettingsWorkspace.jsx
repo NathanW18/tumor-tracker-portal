@@ -57,9 +57,6 @@ export default function SettingsWorkspace({ userRole, userEmail }) {
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
           Account Settings
         </h1>
-        <p style={{ color: '#64748b', margin: '4px 0 0 0', fontSize: '13px' }}>
-          Manage your platform profile credentials and review infrastructure permissions.
-        </p>
       </div>
 
       {statusMessage.text && (
@@ -87,9 +84,9 @@ export default function SettingsWorkspace({ userRole, userEmail }) {
             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center' }}>
               <span style={{ color: '#64748b', fontWeight: '500' }}>Assigned Group</span>
               <div>
-                <span style={{ backgroundColor: '#f1f5f9', color: '#0f172a', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+              <span style={{ backgroundColor: '#f1f5f9', color: '#0f172a', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
                   {userRole}
-                </span>
+                </span>  
               </div>
             </div>
           </div>

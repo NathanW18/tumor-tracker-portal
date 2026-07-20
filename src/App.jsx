@@ -149,7 +149,7 @@ export default function App() {
         {/* BRAND IDENTITY LOGO HEADER */}
         <div style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid #e2e8f0', marginBottom: '16px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
           <img 
-            src="https://pmcdi.ca/wp-content/uploads/2026/05/UHN-Logo-RGB_Blue-PM-scaled.png" 
+            src="https://pmcdi.ca/wp-content/uploads/2026/05/UHN-Logo-RGB_Blue-PM-scaled.png" // change to your logo URL
             alt="UHN Logo" 
             style={{ 
               maxWidth: '100%', 
