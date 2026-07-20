@@ -7,7 +7,7 @@ import DashboardOverview from './components/DashboardOverview';
 import StudiesManagement from './components/StudiesManagement';
 import ModelsRegistry from './components/ModelsRegistry';
 import BioSamplesRegistry from './components/BioSamplesRegistry';
-import STRAnalysisRegistry from './components/StrAnalysisRegistry'; // Case-sensitive matching StrAnalysisRegistry.jsx
+import STRAnalysisRegistry from './components/StrAnalysisRegistry'; 
 import PatientsRegistry from './components/PatientsRegistry'; 
 import SettingsWorkspace from './components/SettingsWorkspace';
 
@@ -29,7 +29,7 @@ export default function App() {
     patients: true,
   });
 
-  // Load tab visibility settings from localStorage on mount so they persist across refreshes
+  // Load tab visibility settings from localStorage on mount
   useEffect(() => {
     const savedVisibility = localStorage.getItem('uhn_sidebar_tab_visibility');
     if (savedVisibility) {
@@ -52,11 +52,11 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        let resolvedGroup = 'RESEARCHER'; // Default everyone to RESEARCHER
+      // STRICT VERIFICATION CHECK: Only authenticate if user is logged in AND email is verified
+      if (user && user.emailVerified) {
+        let resolvedGroup = 'RESEARCHER';
         const lowerEmail = user.email.toLowerCase();
         
-        // STRICT CHECK: Only grant ADMIN if they have an official UHN admin email
         if (lowerEmail.endsWith('@uhn.ca') && lowerEmail.includes('admin')) {
           resolvedGroup = 'ADMIN';
         }
@@ -65,6 +65,7 @@ export default function App() {
         setLoggedInUserGroup(resolvedGroup);
         setIsAuthenticated(true);
       } else {
+        // Prevent dashboard flash for newly registered or unverified users
         setIsAuthenticated(false);
       }
       setAppInitializing(false);
@@ -90,7 +91,15 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return <LoginGate onLoginSuccess={(group, email) => { setLoggedInUserGroup(group); setLoggedInUserEmail(email); setIsAuthenticated(true); }} />;
+    return (
+      <LoginGate 
+        onLoginSuccess={(group, email) => { 
+          setLoggedInUserGroup(group); 
+          setLoggedInUserEmail(email); 
+          setIsAuthenticated(true); 
+        }} 
+      />
+    );
   }
 
   const baseButtonStyle = {
@@ -128,13 +137,11 @@ export default function App() {
 
   const getIconColor = (tabName) => (currentTab === tabName ? '#0284c7' : '#94a3b8');
 
-  // Helper to determine if a tab should be visible to the current user
   const isTabVisible = (tabKey) => {
-    if (loggedInUserGroup === 'ADMIN') return true; // Admins always see everything
-    return visibleTabs[tabKey] !== false; // Otherwise check configured settings
+    if (loggedInUserGroup === 'ADMIN') return true;
+    return visibleTabs[tabKey] !== false;
   };
 
-  // Helper to check if a whole section header should show (if any child tabs are visible)
   const hasVisibleChildren = (tabKeys) => {
     if (loggedInUserGroup === 'ADMIN') return true;
     return tabKeys.some(key => visibleTabs[key] !== false);
@@ -149,7 +156,7 @@ export default function App() {
         {/* BRAND IDENTITY LOGO HEADER */}
         <div style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid #e2e8f0', marginBottom: '16px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
           <img 
-            src="https://pmcdi.ca/wp-content/uploads/2026/05/UHN-Logo-RGB_Blue-PM-scaled.png" // change to your logo URL
+            src="https://pmcdi.ca/wp-content/uploads/2026/05/UHN-Logo-RGB_Blue-PM-scaled.png" 
             alt="UHN Logo" 
             style={{ 
               maxWidth: '100%', 
@@ -164,7 +171,6 @@ export default function App() {
         {/* Main Menu Scroll Container */}
         <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, padding: '0 12px 24px 12px', gap: '4px', overflowY: 'auto' }}>
           
-          {/* ROOT LEVEL LINK: OVERVIEW */}
           <button onClick={() => setCurrentTab('overview')} style={getRootButtonStyle('overview')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={getIconColor('overview')} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '12px' }}>
               <rect x="3" y="3" width="7" height="9" />
@@ -175,7 +181,6 @@ export default function App() {
             <span>Overview</span>
           </button>
 
-          {/* STATIC RECORDS SECTION */}
           {hasVisibleChildren(['studies', 'models', 'samples', 'str-analysis']) && (
             <>
               <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '12px 12px 8px 12px' }} />
@@ -230,7 +235,6 @@ export default function App() {
             </>
           )}
 
-          {/* STATIC CLINICAL SECTION */}
           {hasVisibleChildren(['patients']) && (
             <>
               <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '8px 12px' }} />
@@ -254,7 +258,6 @@ export default function App() {
             </>
           )}
 
-          {/* ROOT LEVEL LINK: SETTINGS */}
           <button onClick={() => setCurrentTab('settings')} style={{ ...getRootButtonStyle('settings'), marginTop: '8px' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={getIconColor('settings')} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '12px' }}>
               <circle cx="12" cy="12" r="3" />
@@ -263,7 +266,6 @@ export default function App() {
             <span>Settings</span>
           </button>
 
-          {/* ADMIN EXCLUSIVE MANAGEMENT TAB */}
           {loggedInUserGroup === 'ADMIN' && (
             <button onClick={() => setCurrentTab('admin-panel')} style={{ ...getRootButtonStyle('admin-panel'), marginTop: '4px' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={getIconColor('admin-panel')} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '12px' }}>
@@ -316,7 +318,6 @@ export default function App() {
         ) : currentTab === 'settings' ? (
           <SettingsWorkspace userRole={loggedInUserGroup} userEmail={loggedInUserEmail} />
         ) : currentTab === 'admin-panel' ? (
-          /* INTERNAL ADMIN PANEL VIEW CONTAINER */
           <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '24px', maxWidth: '600px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0f172a', margin: '0 0 6px 0' }}>Admin Panel</h2>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }}>
@@ -325,7 +326,7 @@ export default function App() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {Object.keys(visibleTabs).map((tabKey) => (
-                <div key={tabKey} style={{ display: 'flex', alignItems: 'center', justifyContent: 'between', padding: '12px 14px', border: '1px solid #f1f5f9', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
+                <div key={tabKey} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', border: '1px solid #f1f5f9', borderRadius: '6px', backgroundColor: '#f8fafc' }}>
                   <div style={{ flexGrow: 1 }}>
                     <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155', textTransform: 'capitalize' }}>
                       {tabKey.replace('-', ' ')}
@@ -335,7 +336,6 @@ export default function App() {
                     </div>
                   </div>
                   
-                  {/* Styled Switch Toggle */}
                   <label style={{ position: 'relative', display: 'inline-block', width: '36px', height: '20px', cursor: 'pointer' }}>
                     <input 
                       type="checkbox" 

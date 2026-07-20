@@ -2,34 +2,46 @@ import React, { useState } from 'react';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 
-export default function LoginGate({ onLoginSuccess }) {
-  // Toggle between 'login' and 'register' modes
+export default function LoginGate({ onLoginSuccess, externalError, clearExternalError }) {
   const [authMode, setAuthMode] = useState('login'); 
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [infoMessage, setInfoMessage] = useState(null);
+  const [localError, setLocalError] = useState(null);
   
-  // Track unverified user object temporarily to allow resending emails
-  const [unverifiedUser, setUnverifiedUser] = useState(null);
-  const [resendLoading, setResendLoading] = useState(false);
+  // Information message banner for account creation / email verification instructions
+  const [infoMessage, setInfoMessage] = useState(null);
+
+  const switchMode = (mode) => {
+    setAuthMode(mode);
+    setLocalError(null);
+    setInfoMessage(null);
+    if (clearExternalError) clearExternalError();
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  const handleInputChange = (setter, val) => {
+    setter(val);
+    if (localError) setLocalError(null);
+    if (clearExternalError) clearExternalError();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) return;
 
     if (authMode === 'register' && password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setLocalError("Passwords do not match.");
       return;
     }
 
     setLoading(true);
-    setError(null);
+    setLocalError(null);
     setInfoMessage(null);
-    setUnverifiedUser(null);
+    if (clearExternalError) clearExternalError();
 
     try {
       if (authMode === 'login') {
@@ -37,19 +49,14 @@ export default function LoginGate({ onLoginSuccess }) {
         const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
         const user = userCredential.user;
 
-        // Gate access check: Enforce email validation record check
+        // Gate access check: Verify email status
         if (!user.emailVerified) {
-          setUnverifiedUser(user); 
-          
-          // Instantly sign them out globally so the parent App state doesn't bypass this screen
-          await signOut(auth); 
-          
-          setError("Please verify your email and check your spam folder.");
+          await signOut(auth);
+          setLocalError("Your email is not verified yet. Please check your inbox and spam folder.");
           setLoading(false);
           return;
         }
 
-        // Assign user groups context based on corporate email coordinates
         let resolvedGroup = 'RESEARCHER';
         if (email.toLowerCase().includes('admin') || email.toLowerCase().endsWith('@uhn.ca')) {
           resolvedGroup = 'ADMIN';
@@ -57,62 +64,38 @@ export default function LoginGate({ onLoginSuccess }) {
 
         onLoginSuccess(resolvedGroup, user.email);
       } else {
-        // Register a new user account in Firebase
+        // Register new account
         const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-        const user = userCredential.user;
+        
+        // Send verification link
+        await sendEmailVerification(userCredential.user);
 
-        // Dispatch operational verification link instantly
-        await sendEmailVerification(user);
-
-        // Terminate the auto-login session immediately before the parent state catches it
+        // Terminate active session immediately so user stays on LoginGate
         await signOut(auth);
 
-        // Reset inputs and redirect user smoothly back to login screen with your exact message
+        // Switch to login tab and show the instructions banner
         setAuthMode('login');
         setPassword('');
         setConfirmPassword('');
-        setInfoMessage("Please verify your email and check your spam folder.");
+        setInfoMessage(`Account created! A verification link was sent to ${email.trim()}. Please check your inbox (and spam folder) to verify before signing in.`);
       }
     } catch (err) {
       console.error(err);
       if (err.code === 'auth/email-already-in-use') {
-        setError('This email address is already registered.');
+        setLocalError('This email address is already registered.');
       } else if (err.code === 'auth/weak-password') {
-        setError('The password must be at least 6 characters long.');
+        setLocalError('The password must be at least 6 characters long.');
       } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        setError('Invalid email or password credentials.');
+        setLocalError('Invalid email or password credentials.');
       } else {
-        setError(err.message);
+        setLocalError(err.message);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendVerification = async () => {
-    if (!unverifiedUser) return;
-    setResendLoading(true);
-    setError(null);
-    try {
-      await sendEmailVerification(unverifiedUser);
-      setInfoMessage("A fresh verification link has been transmitted to your inbox.");
-      setUnverifiedUser(null);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to resend validation payload: " + err.message);
-    } finally {
-      setResendLoading(false);
-    }
-  };
-
-  const switchMode = (mode) => {
-    setAuthMode(mode);
-    setError(null);
-    setInfoMessage(null);
-    setUnverifiedUser(null);
-    setPassword('');
-    setConfirmPassword('');
-  };
+  const activeError = externalError || localError;
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f1f5f9', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -131,30 +114,21 @@ export default function LoginGate({ onLoginSuccess }) {
           {authMode === 'login' ? 'Provide authorized infrastructure credentials' : 'Register your terminal profile access keys'}
         </p>
 
-        {error && (
-          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '10px 12px', borderRadius: '4px', fontSize: '12px', marginBottom: '16px', lineHeight: '1.4' }}>
-            {error}
-            {unverifiedUser && (
-              <button 
-                type="button"
-                onClick={handleResendVerification}
-                disabled={resendLoading}
-                style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: '#0284c7', fontWeight: '600', fontSize: '12px', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}
-              >
-                {resendLoading ? 'Transmitting code...' : 'Resend verification email'}
-              </button>
-            )}
-          </div>
-        )}
-
+        {/* BLUE INFO BANNER (Post-Registration Email Instructions) */}
         {infoMessage && (
-          <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', padding: '10px 12px', borderRadius: '4px', fontSize: '12px', marginBottom: '16px', lineHeight: '1.4' }}>
+          <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', padding: '12px', borderRadius: '6px', fontSize: '12px', marginBottom: '16px', lineHeight: '1.4', fontWeight: '500' }}>
             {infoMessage}
           </div>
         )}
 
+        {/* RED ERROR BANNER (Validation/Unverified Login Errors) */}
+        {activeError && (
+          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '12px', borderRadius: '6px', fontSize: '12px', marginBottom: '16px', lineHeight: '1.4' }}>
+            {activeError}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Email Address */}
           <div>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>Email address</label>
             <input 
@@ -162,12 +136,11 @@ export default function LoginGate({ onLoginSuccess }) {
               required
               placeholder="operator@uhnresearch.ca"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleInputChange(setEmail, e.target.value)}
               style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
-          {/* Password */}
           <div>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>Password</label>
             <input 
@@ -175,12 +148,11 @@ export default function LoginGate({ onLoginSuccess }) {
               required
               placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => handleInputChange(setPassword, e.target.value)}
               style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
-          {/* Confirm Password (Only visible in Register mode) */}
           {authMode === 'register' && (
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>Confirm Password</label>
@@ -189,7 +161,7 @@ export default function LoginGate({ onLoginSuccess }) {
                 required
                 placeholder="••••••••"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => handleInputChange(setConfirmPassword, e.target.value)}
                 style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
@@ -204,7 +176,6 @@ export default function LoginGate({ onLoginSuccess }) {
           </button>
         </form>
 
-        {/* Auth Mode Toggle Link Options */}
         <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
           {authMode === 'login' ? (
             <span>
